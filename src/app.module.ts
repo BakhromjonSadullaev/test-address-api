@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { CacheModule } from '@nestjs/cache-manager';
 import { LoggerModule } from 'nestjs-pino';
 import { redisStore } from 'cache-manager-redis-yet';
+import { AppController } from './app.controller';
 import { AddressController } from './address/address.controller';
 import { AddressService } from './address/address.service';
 import { GeocodingService } from './geocoding/geocoding.service';
@@ -101,7 +102,7 @@ import { loggerConfig } from './config/logger.config';
       maxRedirects: 5,
     }),
   ],
-  controllers: [AddressController, HealthController],
+  controllers: [AppController, AddressController, HealthController],
   providers: [
     AddressService,
     GeocodingService,
