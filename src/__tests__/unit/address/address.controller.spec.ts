@@ -85,14 +85,12 @@ describe('AddressController', () => {
 
       mockAddressService.validateAddress.mockResolvedValue(mockResponse);
 
-      // Input with extra whitespace
       const dto: ValidateAddressDto = {
         address: '  1600  Amphitheatre   Parkway,  Mountain  View,  CA  ',
       };
 
       await controller.validateAddress(dto);
 
-      // Service should be called with normalized address
       expect(mockAddressService.validateAddress).toHaveBeenCalledWith({
         address: '1600 Amphitheatre Parkway, Mountain View, CA',
       });

@@ -161,7 +161,6 @@ describe('GeocodingService', () => {
 
     it('should handle PARTIAL_MATCH status', async () => {
       mockHttpService.get.mockReturnValue(of(mockSuccessResponse));
-      // Override status to PARTIAL_MATCH
       const partialMatchResponse = {
         ...mockSuccessResponse,
         data: {

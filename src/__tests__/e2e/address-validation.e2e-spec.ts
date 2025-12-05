@@ -29,7 +29,6 @@ describe('Address Validation API (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     
-    // Enable API versioning (same as main.ts)
     app.enableVersioning({
       type: VersioningType.URI,
       defaultVersion: '1',

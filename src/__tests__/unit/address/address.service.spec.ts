@@ -43,7 +43,6 @@ describe('AddressService', () => {
     geocodingService = module.get<GeocodingService>(GeocodingService);
     cacheManager = module.get(CACHE_MANAGER);
 
-    // Reset mocks
     jest.clearAllMocks();
   });
 
@@ -108,7 +107,6 @@ describe('AddressService', () => {
 
       const result = await service.validateAddress(dto);
 
-      // Address may be VALID or CORRECTED depending on similarity to formatted address
       expect([AddressValidationStatus.VALID, AddressValidationStatus.CORRECTED]).toContain(
         result.status,
       );
@@ -198,14 +196,12 @@ describe('AddressService', () => {
       mockGeocodingService.isUSAddress.mockReturnValue(true);
       mockCacheManager.set.mockResolvedValue(undefined);
 
-      // Service expects already-normalized address from controller
       const dto: ValidateAddressDto = {
         address: '1600 Amphitheatre Parkway, Mountain View, CA',
       };
 
       await service.validateAddress(dto);
 
-      // Service uses address as-is for cache key
       expect(mockCacheManager.get).toHaveBeenCalledWith(
         'address:1600 Amphitheatre Parkway, Mountain View, CA',
       );
@@ -225,7 +221,6 @@ describe('AddressService', () => {
 
       await service.validateAddress(dto);
 
-      // Should cache unverifiable results
       expect(mockCacheManager.set).toHaveBeenCalled();
     });
   });

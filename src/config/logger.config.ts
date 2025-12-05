@@ -14,13 +14,11 @@ export const loggerConfig = (
   const nodeEnv = configService.get('NODE_ENV')!;
 
   const isDevelopment = nodeEnv === 'development';
-  // Use pretty format if explicitly set to 'pretty', or if in development and format is not explicitly 'json'
   const usePretty = logFormat === 'pretty' || (isDevelopment && logFormat !== 'json');
 
   return {
     pinoHttp: {
       level: logLevel,
-      // Use pretty printing in development, JSON in production
       transport: usePretty
         ? {
             target: 'pino-pretty',
@@ -32,7 +30,6 @@ export const loggerConfig = (
             },
           }
         : undefined,
-      // Structured JSON logging for production
       serializers: {
         req: (req) => ({
           id: req.id,
@@ -60,7 +57,6 @@ export const loggerConfig = (
           statusCode: err.statusCode,
         }),
       },
-      // Custom log formatter for structured logs
       formatters: {
         level: (label: string) => {
           return { level: label.toUpperCase() };
@@ -74,11 +70,9 @@ export const loggerConfig = (
           };
         },
       },
-      // Request ID generation
       genReqId: (req) => {
         return req.headers['x-request-id'] || req.id;
       },
-      // Custom error serializer
       customErrorObject: (req, res, err) => {
         return {
           type: err.constructor.name,
@@ -89,7 +83,6 @@ export const loggerConfig = (
           method: req.method,
         };
       },
-      // Redact sensitive information
       redact: {
         paths: [
           'req.headers.authorization',
@@ -100,21 +93,17 @@ export const loggerConfig = (
         ],
         remove: true,
       },
-      // Custom log message
       customLogLevel: (req, res, err) => {
         if (res.statusCode >= 500) return 'error';
         if (res.statusCode >= 400) return 'warn';
         return 'info';
       },
-      // Custom success message
       customSuccessMessage: (req, res) => {
         return `${req.method} ${req.url} ${res.statusCode}`;
       },
-      // Custom error message
       customErrorMessage: (req, res, err) => {
         return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
       },
-      // Custom attribute keys for better compatibility with log services
       customAttributeKeys: {
         req: 'request',
         res: 'response',

@@ -137,11 +137,9 @@ export class AddressController {
   async validateAddress(
     @Body() dto: ValidateAddressDto,
   ): Promise<AddressResponseDto> {
-    // Normalize address input at controller level
     const normalizedAddress = this.normalizeInput(dto.address);
     this.logger.log(`Validating address: ${normalizedAddress}`);
     
-    // Create new DTO with normalized address
     const normalizedDto: ValidateAddressDto = {
       address: normalizedAddress,
     };

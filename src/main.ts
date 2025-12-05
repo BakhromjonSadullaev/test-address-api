@@ -12,17 +12,12 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
-  // Use Pino logger
   app.useLogger(app.get(Logger));
 
-  // Get config service
   const configService = app.get<ConfigService<EnvConfig>>(ConfigService);
 
-  // Security headers with Helmet
-  // Configure Helmet for API security
   app.use(
     helmet({
-      // Content Security Policy - relaxed for API endpoints
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -31,26 +26,20 @@ async function bootstrap() {
           imgSrc: ["'self'", 'data:', 'https:'],
         },
       },
-      // Cross-Origin Embedder Policy - disabled for API
       crossOriginEmbedderPolicy: false,
-      // HSTS (HTTP Strict Transport Security)
       hsts: {
-        maxAge: 31536000, // 1 year
+        maxAge: 31536000,
         includeSubDomains: true,
         preload: true,
       },
-      // X-Content-Type-Options
       noSniff: true,
-      // X-Frame-Options
       frameguard: {
         action: 'deny',
       },
-      // X-XSS-Protection
       xssFilter: true,
     }),
   );
 
-  // Configure CORS based on environment variables
   const corsOrigin = configService.get('CORS_ORIGIN')!;
   const corsCredentials = configService.get('CORS_CREDENTIALS')!;
   const corsMethods = configService.get('CORS_METHODS')!;
@@ -68,13 +57,11 @@ async function bootstrap() {
       .map((header) => header.trim()),
   });
 
-  // Enable API versioning
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -83,7 +70,6 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger/OpenAPI Documentation
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Address Validation API')
     .setDescription(
@@ -126,7 +112,6 @@ async function bootstrap() {
     },
   });
 
-  // Get port from validated config
   const port = configService.get('PORT')!;
   const logger = app.get(Logger);
 

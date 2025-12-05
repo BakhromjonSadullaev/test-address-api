@@ -31,10 +31,8 @@ export class AddressService {
   async validateAddress(
     dto: ValidateAddressDto,
   ): Promise<AddressResponseDto> {
-    // Address is already normalized at controller level
     const address = dto.address;
 
-    // Check cache first
     const cacheKey = `address:${address}`;
     const cached = await this.cacheManager.get<AddressResponseDto>(cacheKey);
     if (cached) {
@@ -56,7 +54,7 @@ export class AddressService {
           message: 'Address is not a valid US address',
         };
 
-        await this.cacheManager.set(cacheKey, response, 300 * 1000); // 5 minutes
+        await this.cacheManager.set(cacheKey, response, 300 * 1000);
         return response;
       }
 
@@ -89,7 +87,6 @@ export class AddressService {
       this.logger.error(`Address validation error: ${error.message}`, error.stack);
 
       if (error instanceof HttpException) {
-        // Handle invalid address errors (BAD_REQUEST) from geocoding service
         if (error.getStatus() === HttpStatus.BAD_REQUEST) {
           return {
             status: AddressValidationStatus.UNVERIFIABLE,
@@ -127,7 +124,6 @@ export class AddressService {
     const normalizedFormatted = geocodingResult.formattedAddress.toLowerCase();
     const similarity = this.calculateSimilarity(normalizedOriginal, normalizedFormatted);
 
-    // High similarity means address is valid as-is
     if (this.isHighSimilarity(similarity)) {
       return {
         status: AddressValidationStatus.VALID,
@@ -136,7 +132,6 @@ export class AddressService {
       };
     }
 
-    // Collect corrections and adjust confidence
     const corrections: string[] = [];
     let confidence = 1.0;
 
@@ -159,7 +154,6 @@ export class AddressService {
       confidence,
     );
 
-    // Determine final status and adjust confidence based on similarity
     const status = this.determineStatus(similarity, confidence);
     confidence = this.adjustConfidenceBySimilarity(similarity, confidence);
 

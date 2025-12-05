@@ -6,7 +6,6 @@ import { z } from 'zod';
  * before the application starts
  */
 export const envValidationSchema = z.object({
-  // Server Configuration
   PORT: z
     .string()
     .default('3000')
@@ -16,13 +15,11 @@ export const envValidationSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
 
-  // Google Geocoding API - Required
   GOOGLE_GEOCODING_API_KEY: z
     .string()
     .min(1, 'GOOGLE_GEOCODING_API_KEY is required')
     .describe('Google Geocoding API key'),
 
-  // Rate Limiting Configuration
   RATE_LIMIT_TTL: z
     .string()
     .default('60')
@@ -34,15 +31,12 @@ export const envValidationSchema = z.object({
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 
-  // Cache Configuration
   REDIS_TTL: z
     .string()
     .default('3600')
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
 
-  // Redis Configuration
-  // If REDIS_HOST is set, Redis will be used; otherwise in-memory cache is used
   REDIS_HOST: z
     .string()
     .default('')
@@ -64,7 +58,6 @@ export const envValidationSchema = z.object({
     .pipe(z.boolean())
     .describe('Enable TLS for Redis connection'),
 
-  // CORS Configuration
   CORS_ORIGIN: z
     .string()
     .default('*')
@@ -86,7 +79,6 @@ export const envValidationSchema = z.object({
     .default('Content-Type,Authorization')
     .describe('Comma-separated list of allowed headers'),
 
-  // Logging Configuration
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info')
@@ -96,7 +88,6 @@ export const envValidationSchema = z.object({
     .default('json')
     .describe('Log format: json for production, pretty for development'),
 
-  // Circuit Breaker Configuration
   CIRCUIT_BREAKER_ERROR_THRESHOLD_PERCENTAGE: z
     .string()
     .default('50')

@@ -16,7 +16,6 @@ import { loggerConfig } from './config/logger.config';
 
 @Module({
   imports: [
-    // Configuration module with validation
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -32,12 +31,10 @@ import { loggerConfig } from './config/logger.config';
         return result.data;
       },
     }),
-    // Structured JSON logging with Pino
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: loggerConfig,
     }),
-    // Rate limiting - using validated config
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService<EnvConfig>) => [
@@ -47,7 +44,6 @@ import { loggerConfig } from './config/logger.config';
         },
       ],
     }),
-    // Caching - Redis if configured, otherwise in-memory
     CacheModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService<EnvConfig>) => {
@@ -57,7 +53,6 @@ import { loggerConfig } from './config/logger.config';
         const redisTls = configService.get('REDIS_TLS')!;
         const ttl = configService.get('REDIS_TTL')! * 1000; // Convert to milliseconds
 
-        // Use Redis if REDIS_HOST is configured
         if (redisHost) {
           try {
             const store = await redisStore({
@@ -78,7 +73,6 @@ import { loggerConfig } from './config/logger.config';
             } as any;
           } catch (error) {
             console.error('❌ Failed to connect to Redis, falling back to in-memory cache:', error);
-            // Fallback to in-memory cache
             return {
               ttl,
               max: 100,
@@ -87,16 +81,14 @@ import { loggerConfig } from './config/logger.config';
           }
         }
 
-        // Use in-memory cache if Redis is not configured
         console.log('📦 Using in-memory cache (Redis not configured)');
         return {
           ttl,
-          max: 100, // Maximum number of items in cache
+          max: 100,
           isGlobal: true,
         };
       },
     }),
-    // HTTP client for external API calls
     HttpModule.register({
       timeout: 5000,
       maxRedirects: 5,

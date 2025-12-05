@@ -20,10 +20,8 @@ export class GeocodingService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService<EnvConfig>,
   ) {
-    // API key is validated at startup, so it's guaranteed to exist
     this.apiKey = this.configService.get('GOOGLE_GEOCODING_API_KEY')!;
 
-    // Initialize circuit breaker
     const circuitBreakerOptions = {
       errorThresholdPercentage: this.configService.get(
         'CIRCUIT_BREAKER_ERROR_THRESHOLD_PERCENTAGE',
@@ -36,15 +34,11 @@ export class GeocodingService {
       rollingCountBuckets: 10,
       name: 'GeocodingAPI',
       enabled: true,
-      // Only count non-HttpException errors as failures
-      // HttpExceptions (BAD_REQUEST, etc.) are expected and shouldn't open circuit
       errorFilter: (error: any) => {
-        // Don't count HttpExceptions as circuit breaker failures
-        // Return true to filter out (not count as failure), false to count as failure
         if (error instanceof HttpException) {
-          return true; // Filter out - don't count as failure
+          return true;
         }
-        return false; // Count as failure
+        return false;
       },
     };
 
@@ -53,7 +47,6 @@ export class GeocodingService {
       circuitBreakerOptions,
     ) as any;
 
-    // Circuit breaker event handlers
     this.circuitBreaker.on('open', () => {
       this.logger.warn(
         'Circuit breaker opened: Geocoding API is failing, requests will be rejected',
@@ -73,8 +66,6 @@ export class GeocodingService {
     });
 
     this.circuitBreaker.on('failure', (error: any) => {
-      // Only log failures that are not expected HttpExceptions
-      // HttpExceptions (like BAD_REQUEST) are expected and shouldn't trigger circuit breaker
       if (!(error instanceof HttpException)) {
         this.logger.error(
           `Circuit breaker recorded failure: ${error.message}`,
@@ -92,17 +83,12 @@ export class GeocodingService {
    */
   async geocodeAddress(address: string): Promise<GeocodingResult> {
     try {
-      // Use circuit breaker to protect against external API failures
       return await (this.circuitBreaker.fire(address) as Promise<GeocodingResult>);
     } catch (error: any) {
-      // Re-throw HttpException first (from callGeocodingAPI - these are expected errors)
-      // This must be checked before circuit breaker errors
       if (error instanceof HttpException) {
         throw error;
       }
 
-      // Handle circuit breaker open state
-      // Check for various circuit breaker error indicators
       if (
         error.name === 'CircuitBreakerOpenError' ||
         error.message?.includes('Breaker is open') ||
@@ -118,7 +104,6 @@ export class GeocodingService {
         );
       }
 
-      // Handle other errors (network, timeout, etc.)
       this.logger.error(`Geocoding error: ${error.message}`, error.stack);
       throw new HttpException(
         'Failed to geocode address',
@@ -168,8 +153,6 @@ export class GeocodingService {
         );
       }
 
-      // After handling ZERO_RESULTS and ensuring status is OK/PARTIAL_MATCH,
-      // results should always exist and have at least one item
       if (data.results.length === 0) {
         throw new HttpException(
           'Invalid address: no results found for the provided address',
@@ -180,11 +163,9 @@ export class GeocodingService {
       const result = data.results[0];
       return this.parseGeocodingResult(result);
     } catch (error) {
-      // Re-throw HttpExceptions (these are expected errors, not circuit breaker failures)
       if (error instanceof HttpException) {
         throw error;
       }
-      // For other errors (network, timeout, etc.), let circuit breaker handle them
       throw error;
     }
   }
