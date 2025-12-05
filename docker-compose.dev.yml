@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Redis Cache Service (Development)
+  redis:
+    image: redis:7-alpine
+    container_name: address-api-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - address-api-network
+    restart: unless-stopped
+
+  # NestJS API Application (Development with hot reload)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: address-api-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_TTL=3600
+      - RATE_LIMIT_TTL=60
+      - RATE_LIMIT_MAX=100
+      - CORS_ORIGIN=*
+      - CORS_CREDENTIALS=false
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - LOG_FORMAT=${LOG_FORMAT:-pretty}
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - address-api-network
+    restart: unless-stopped
+    command: npm run start:dev
+
+volumes:
+  redis-dev-data:
+    driver: local
+
+networks:
+  address-api-network:
+    driver: bridge
+

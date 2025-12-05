@@ -1,0 +1,65 @@
+### Address Validation API Test Examples
+### Use with REST Client extension in VS Code or similar tools
+
+### Test 1: Valid Address (Versioned)
+POST http://localhost:3000/v1/validate-address
+Content-Type: application/json
+
+{
+  "address": "1600 Amphitheatre Parkway, Mountain View, CA"
+}
+
+### Test 2: Address with Typos (Should be corrected)
+POST http://localhost:3000/v1/validate-address
+Content-Type: application/json
+
+{
+  "address": "1600 Amphitheatre Pkwy, Mt View, California"
+}
+
+### Test 3: Partial Address
+POST http://localhost:3000/v1/validate-address
+Content-Type: application/json
+
+{
+  "address": "Times Square, New York"
+}
+
+### Test 4: Invalid/Unverifiable Address
+POST http://localhost:3000/v1/validate-address
+Content-Type: application/json
+
+{
+  "address": "123 Fake Street, Nowhere, XY 99999"
+}
+
+### Test 5: Address Missing Street Number
+POST http://localhost:3000/v1/validate-address
+Content-Type: application/json
+
+{
+  "address": "Main Street, Boston, MA"
+}
+
+### Test 6: Non-US Address (Should be unverifiable)
+POST http://localhost:3000/v1/validate-address
+Content-Type: application/json
+
+{
+  "address": "10 Downing Street, London, UK"
+}
+
+### Test 7: Default endpoint (also works, defaults to v1)
+POST http://localhost:3000/validate-address
+Content-Type: application/json
+
+{
+  "address": "1600 Amphitheatre Parkway, Mountain View, CA"
+}
+
+### Health Check (not versioned)
+GET http://localhost:3000/health
+
+### API Info (Versioned)
+GET http://localhost:3000/v1/validate-address/info
+
