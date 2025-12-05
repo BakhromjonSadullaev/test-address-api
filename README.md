@@ -574,58 +574,6 @@ The following aspects were carefully designed and implemented:
 3. **Caching Strategy**: Deciding on cache keys, TTLs, and negative result handling
 4. **API Response Structure**: Designing the response DTO to be clear and informative
 
-## Trade-offs and Considerations
-
-### Caching Trade-offs
-
-**In-Memory Cache (Default)**
-- ✅ Fast and simple, no external dependencies
-- ✅ Works well for single-instance deployments
-- ✅ Zero configuration required
-- ❌ Not shared across multiple instances
-- ❌ Lost on server restart
-- ❌ Limited by available memory
-
-**Redis Cache (Configured via REDIS_HOST)**
-- ✅ Shared across multiple instances
-- ✅ Persistent across restarts
-- ✅ Better for distributed systems
-- ✅ Scalable and production-ready
-- ❌ Requires Redis infrastructure
-- ❌ Additional network latency (minimal)
-- ❌ Slightly more complex setup
-
-**Recommendation**: 
-- **Development/Single Instance**: Use in-memory cache (default, no configuration needed)
-- **Production/Multiple Instances**: Configure Redis by setting `REDIS_HOST` in environment variables
-- The application automatically selects the appropriate cache based on configuration
-
-### Rate Limiting Trade-offs
-
-**Current Approach**: Fixed rate limit per IP/endpoint
-- ✅ Simple to implement and understand
-- ✅ Effective for basic abuse prevention
-- ❌ Doesn't account for different user tiers
-- ❌ May block legitimate high-volume users
-
-**Future Enhancements**:
-- Token-based rate limiting for authenticated users
-- Tiered rate limits (free vs. paid)
-- Sliding window instead of fixed window
-
-### Geocoding API Trade-offs
-
-**Google Geocoding API (Current)**
-- ✅ High accuracy and coverage
-- ✅ Good handling of typos and partial addresses
-- ✅ Well-documented
-- ❌ Requires API key and has usage costs
-- ❌ Rate limits and quotas
-
-**Alternative Options**:
-- **USPS Address API**: Free but requires registration, US-only
-- **SmartyStreets**: Commercial, high accuracy
-- **Mapbox Geocoding**: Alternative to Google, similar features
 
 ## Environment Variables
 
