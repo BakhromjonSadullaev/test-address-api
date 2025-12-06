@@ -8,6 +8,7 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ConfigService } from '@nestjs/config';
+import levenshtein from 'js-levenshtein';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { GeocodingResult } from '../geocoding/types/geocoding-result.interface';
 import {
@@ -280,49 +281,17 @@ export class AddressService {
    * Calculates similarity between two strings using Levenshtein distance
    */
   private calculateSimilarity(str1: string, str2: string): number {
-    const longer = str1.length > str2.length ? str1 : str2;
-    const shorter = str1.length > str2.length ? str2 : str1;
+    const normalizedStr1 = str1.toLowerCase();
+    const normalizedStr2 = str2.toLowerCase();
+    const longer = normalizedStr1.length > normalizedStr2.length ? normalizedStr1 : normalizedStr2;
+    const shorter = normalizedStr1.length > normalizedStr2.length ? normalizedStr2 : normalizedStr1;
 
     if (longer.length === 0) {
       return 1.0;
     }
 
-    const distance = this.levenshteinDistance(
-      longer.toLowerCase(),
-      shorter.toLowerCase(),
-    );
+    const distance = levenshtein(longer, shorter);
     return (longer.length - distance) / longer.length;
-  }
-
-  /**
-   * Calculates Levenshtein distance between two strings
-   */
-  private levenshteinDistance(str1: string, str2: string): number {
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1,
-          );
-        }
-      }
-    }
-
-    return matrix[str2.length][str1.length];
   }
 
   /**

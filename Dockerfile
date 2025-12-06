@@ -1,4 +1,4 @@
-# Multi-stage build for optimized Docker image
+# Multi-stage Dockerfile supporting both development and production
 
 # Stage 1: Build
 FROM node:20-alpine AS builder
@@ -19,13 +19,25 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS production
+# Stage 2: Base runtime
+FROM node:20-alpine AS base
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
+
+# Install dependencies (will be overridden in production stage)
+RUN npm ci
+
+# Copy source code (for development)
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Stage 3: Production
+FROM base AS production
 
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
@@ -41,9 +53,6 @@ RUN addgroup -g 1001 -S nodejs && \
 RUN chown -R nestjs:nodejs /app
 USER nestjs
 
-# Expose port
-EXPOSE 3000
-
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
@@ -51,5 +60,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Start the application
 CMD ["node", "dist/main"]
 
+# Stage 4: Development
+FROM base AS development
 
-
+# Development mode with hot reload
+CMD ["npm", "run", "start:dev"]

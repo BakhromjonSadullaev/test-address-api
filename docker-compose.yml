@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Redis Cache Service
   redis:
     image: redis:7-alpine
     container_name: address-api-redis
@@ -19,12 +18,11 @@ services:
       - address-api-network
     restart: unless-stopped
 
-  # NestJS API Application
   api:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
+      target: ${DOCKER_TARGET:-production}
     container_name: address-api
     ports:
       - "${PORT:-3000}:3000"
@@ -32,6 +30,7 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-3000}
       - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
+      - GOOGLE_GEOCODING_API_URL=${GOOGLE_GEOCODING_API_URL:-}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
@@ -45,8 +44,17 @@ services:
       - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS:-Content-Type,Authorization}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      - CIRCUIT_BREAKER_ERROR_THRESHOLD_PERCENTAGE=${CIRCUIT_BREAKER_ERROR_THRESHOLD_PERCENTAGE:-50}
+      - CIRCUIT_BREAKER_TIMEOUT=${CIRCUIT_BREAKER_TIMEOUT:-10000}
+      - CIRCUIT_BREAKER_RESET_TIMEOUT=${CIRCUIT_BREAKER_RESET_TIMEOUT:-30000}
+      - CIRCUIT_BREAKER_ROLLING_WINDOW=${CIRCUIT_BREAKER_ROLLING_WINDOW:-10000}
     env_file:
       - .env
+    # Uncomment volumes below for development mode with hot reload
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    #   - /app/dist
     depends_on:
       redis:
         condition: service_healthy
@@ -67,4 +75,3 @@ volumes:
 networks:
   address-api-network:
     driver: bridge
-
