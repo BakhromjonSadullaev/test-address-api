@@ -13,7 +13,7 @@ import { EnvConfig } from '../config/env.validation';
 export class GeocodingService {
   private readonly logger = new Logger(GeocodingService.name);
   private readonly apiKey: string;
-  private readonly baseUrl = 'https://maps.googleapis.com/maps/api/geocode/json';
+  private readonly baseUrl: string;
   private readonly circuitBreaker: CircuitBreaker;
 
   constructor(
@@ -21,6 +21,7 @@ export class GeocodingService {
     private readonly configService: ConfigService<EnvConfig>,
   ) {
     this.apiKey = this.configService.get('GOOGLE_GEOCODING_API_KEY')!;
+    this.baseUrl = this.configService.get('GOOGLE_GEOCODING_API_URL')!;
 
     const circuitBreakerOptions = {
       errorThresholdPercentage: this.configService.get(

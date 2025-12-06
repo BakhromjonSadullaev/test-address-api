@@ -19,6 +19,11 @@ export const envValidationSchema = z.object({
     .string()
     .min(1, 'GOOGLE_GEOCODING_API_KEY is required')
     .describe('Google Geocoding API key'),
+  GOOGLE_GEOCODING_API_URL: z
+    .string()
+    .url('GOOGLE_GEOCODING_API_URL must be a valid URL')
+    .default('https://maps.googleapis.com/maps/api/geocode/json')
+    .describe('Google Geocoding API base URL'),
 
   RATE_LIMIT_TTL: z
     .string()
