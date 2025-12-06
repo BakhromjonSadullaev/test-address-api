@@ -35,7 +35,7 @@ export class GeocodingService {
       rollingCountBuckets: 10,
       name: 'GeocodingAPI',
       enabled: true,
-      errorFilter: (error: any) => {
+      errorFilter: (error: unknown) => {
         if (error instanceof HttpException) {
           return true;
         }
@@ -46,7 +46,7 @@ export class GeocodingService {
     this.circuitBreaker = new CircuitBreaker(
       (address: string) => this.callGeocodingAPI(address),
       circuitBreakerOptions,
-    ) as any;
+    );
 
     this.circuitBreaker.on('open', () => {
       this.logger.warn(
@@ -66,11 +66,13 @@ export class GeocodingService {
       );
     });
 
-    this.circuitBreaker.on('failure', (error: any) => {
+    this.circuitBreaker.on('failure', (error: unknown) => {
       if (!(error instanceof HttpException)) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorStack = error instanceof Error ? error.stack : undefined;
         this.logger.error(
-          `Circuit breaker recorded failure: ${error.message}`,
-          error.stack,
+          `Circuit breaker recorded failure: ${errorMessage}`,
+          errorStack,
         );
       }
     });
@@ -84,17 +86,29 @@ export class GeocodingService {
    */
   async geocodeAddress(address: string): Promise<GeocodingResult> {
     try {
-      return await (this.circuitBreaker.fire(address) as Promise<GeocodingResult>);
-    } catch (error: any) {
+      const result = await this.circuitBreaker.fire(address);
+      if (!result || typeof result !== 'object' || !('formattedAddress' in result)) {
+        throw new HttpException(
+          'Invalid response from geocoding service',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      return result as GeocodingResult;
+    } catch (error: unknown) {
       if (error instanceof HttpException) {
         throw error;
       }
 
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const errorName = errorObj.name;
+      const errorMessage = errorObj.message;
+      const errorCode = 'code' in errorObj ? (errorObj.code as string) : undefined;
+
       if (
-        error.name === 'CircuitBreakerOpenError' ||
-        error.message?.includes('Breaker is open') ||
-        error.message?.includes('Circuit breaker is open') ||
-        error.code === 'ECIRCUITOPEN'
+        errorName === 'CircuitBreakerOpenError' ||
+        errorMessage?.includes('Breaker is open') ||
+        errorMessage?.includes('Circuit breaker is open') ||
+        errorCode === 'ECIRCUITOPEN'
       ) {
         this.logger.error(
           'Circuit breaker is open: Geocoding API is unavailable',
@@ -105,7 +119,7 @@ export class GeocodingService {
         );
       }
 
-      this.logger.error(`Geocoding error: ${error.message}`, error.stack);
+      this.logger.error(`Geocoding error: ${errorMessage}`, errorObj.stack);
       throw new HttpException(
         'Failed to geocode address',
         HttpStatus.INTERNAL_SERVER_ERROR,

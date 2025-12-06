@@ -69,7 +69,7 @@ import { loggerConfig } from './config/logger.config';
               ttl,
               max: undefined,
               isGlobal: true,
-            } as any;
+            };
           } catch (error) {
             console.error('❌ Failed to connect to Redis, falling back to in-memory cache:', error);
             return {

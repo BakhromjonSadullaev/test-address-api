@@ -97,11 +97,12 @@ export class HealthController {
       const responseTime = Date.now() - googleApiStartTime;
       checks.googleApi.status = 'ok';
       checks.googleApi.responseTime = responseTime;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const responseTime = Date.now() - googleApiStartTime;
       checks.googleApi.status = 'error';
       checks.googleApi.responseTime = responseTime;
-      checks.googleApi.error = error.message || 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      checks.googleApi.error = errorMessage;
     }
 
     // Determine overall status

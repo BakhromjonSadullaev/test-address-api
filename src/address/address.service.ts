@@ -7,21 +7,29 @@ import {
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { ConfigService } from '@nestjs/config';
 import { GeocodingService } from '../geocoding/geocoding.service';
+import { GeocodingResult } from '../geocoding/types/geocoding-result.interface';
 import {
   AddressResponseDto,
   AddressValidationStatus,
 } from './dto/address-response.dto';
 import { ValidateAddressDto } from './dto/validate-address.dto';
+import { EnvConfig } from '../config/env.validation';
 
 @Injectable()
 export class AddressService {
   private readonly logger = new Logger(AddressService.name);
+  private readonly cacheTtl: number;
 
   constructor(
     private readonly geocodingService: GeocodingService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+    private readonly configService: ConfigService<EnvConfig>,
+  ) {
+    // Get cache TTL from config (in seconds) and convert to milliseconds
+    this.cacheTtl = this.configService.get('REDIS_TTL')! * 1000;
+  }
 
   /**
    * Validates and standardizes a property address
@@ -54,7 +62,8 @@ export class AddressService {
           message: 'Address is not a valid US address',
         };
 
-        await this.cacheManager.set(cacheKey, response, 300 * 1000);
+        await this.cacheManager.set(cacheKey, response, this.cacheTtl);
+        this.logger.debug(`Cached invalid address (non-US) for: ${address}`);
         return response;
       }
 
@@ -79,33 +88,41 @@ export class AddressService {
         message: this.getStatusMessage(status, corrections),
       };
 
-      await this.cacheManager.set(cacheKey, response);
+      await this.cacheManager.set(cacheKey, response, this.cacheTtl);
       this.logger.debug(`Cached address validation result for: ${address}`);
 
       return response;
     } catch (error) {
       this.logger.error(`Address validation error: ${error.message}`, error.stack);
 
+      let response: AddressResponseDto;
+
       if (error instanceof HttpException) {
         if (error.getStatus() === HttpStatus.BAD_REQUEST) {
-          return {
+          response = {
             status: AddressValidationStatus.UNVERIFIABLE,
             originalAddress: dto.address,
             standardizedAddress: {},
             confidence: 0,
             message: error.message || 'Address could not be found or verified',
           };
+        } else {
+          throw error;
         }
-        throw error;
+      } else {
+        response = {
+          status: AddressValidationStatus.UNVERIFIABLE,
+          originalAddress: dto.address,
+          standardizedAddress: {},
+          confidence: 0,
+          message: 'An error occurred while validating the address',
+        };
       }
 
-      return {
-        status: AddressValidationStatus.UNVERIFIABLE,
-        originalAddress: dto.address,
-        standardizedAddress: {},
-        confidence: 0,
-        message: 'An error occurred while validating the address',
-      };
+      // Cache invalid addresses to avoid repeated API calls
+      await this.cacheManager.set(cacheKey, response, this.cacheTtl);
+      this.logger.debug(`Cached invalid address (error) for: ${address}`);
+      return response;
     }
   }
 
@@ -114,7 +131,7 @@ export class AddressService {
    */
   private analyzeValidation(
     original: string,
-    geocodingResult: any,
+    geocodingResult: GeocodingResult,
   ): {
     status: AddressValidationStatus;
     confidence: number;
@@ -160,19 +177,14 @@ export class AddressService {
     return { status, confidence, corrections };
   }
 
-  /**
-   * Checks if similarity is high enough to consider address valid
-   */
   private isHighSimilarity(similarity: number): boolean {
     return similarity > 0.9;
   }
 
-  /**
-   * Checks if street number was added and records correction
-   */
+
   private checkStreetNumberCorrection(
     original: string,
-    geocodingResult: any,
+    geocodingResult: GeocodingResult,
     corrections: string[],
     confidence: number,
   ): number {
@@ -190,12 +202,10 @@ export class AddressService {
     return confidence;
   }
 
-  /**
-   * Checks if state was standardized and records correction
-   */
+
   private checkStateCorrection(
     normalizedOriginal: string,
-    geocodingResult: any,
+    geocodingResult: GeocodingResult,
     corrections: string[],
     confidence: number,
   ): number {
@@ -212,12 +222,10 @@ export class AddressService {
     return confidence;
   }
 
-  /**
-   * Checks if zip code was added or formatted and records correction
-   */
+
   private checkZipCodeCorrection(
     original: string,
-    geocodingResult: any,
+    geocodingResult: GeocodingResult,
     corrections: string[],
     confidence: number,
   ): number {
@@ -234,9 +242,7 @@ export class AddressService {
     return confidence;
   }
 
-  /**
-   * Determines validation status based on similarity
-   */
+
   private determineStatus(
     similarity: number,
     _confidence: number,
