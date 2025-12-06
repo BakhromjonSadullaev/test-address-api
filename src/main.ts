@@ -16,29 +16,10 @@ async function bootstrap() {
 
   const configService = app.get<ConfigService<EnvConfig>>(ConfigService);
 
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
-      },
-      crossOriginEmbedderPolicy: false,
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-      noSniff: true,
-      frameguard: {
-        action: 'deny',
-      },
-      xssFilter: true,
-    }),
-  );
+  // Security headers
+  app.use(helmet());
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.disable('x-powered-by');
 
   const corsOrigin = configService.get('CORS_ORIGIN')!;
   const corsCredentials = configService.get('CORS_CREDENTIALS')!;
