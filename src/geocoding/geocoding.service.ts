@@ -5,23 +5,23 @@ import { firstValueFrom } from 'rxjs';
 import CircuitBreaker from 'opossum';
 import {
   GeocodingResult,
-  GeocodingApiResponse,
+  CensusGeocodingApiResponse,
 } from './types/geocoding-result.interface';
 import { EnvConfig } from '../config/env.validation';
 
 @Injectable()
 export class GeocodingService {
   private readonly logger = new Logger(GeocodingService.name);
-  private readonly apiKey: string;
   private readonly baseUrl: string;
+  private readonly apiKey?: string;
   private readonly circuitBreaker: CircuitBreaker;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService<EnvConfig>,
   ) {
-    this.apiKey = this.configService.get('GOOGLE_GEOCODING_API_KEY')!;
-    this.baseUrl = this.configService.get('GOOGLE_GEOCODING_API_URL')!;
+    this.baseUrl = this.configService.get('GEOCODING_API_URL')!;
+    this.apiKey = this.configService.get('GEOCODING_API_KEY');
 
     const circuitBreakerOptions = {
       errorThresholdPercentage: this.configService.get(
@@ -79,7 +79,7 @@ export class GeocodingService {
   }
 
   /**
-   * Validates and geocodes an address using Google Geocoding API
+   * Validates and geocodes an address using US Census Geocoding API
    * Protected by circuit breaker to prevent cascading failures
    * @param address - Free-form address string
    * @returns GeocodingResult with standardized address components
@@ -128,107 +128,113 @@ export class GeocodingService {
   }
 
   /**
-   * Internal method that performs the actual API call
+   * Internal method that performs the actual API call to US Census Geocoding API
    * This is wrapped by the circuit breaker
    * @param address - Free-form address string
    * @returns GeocodingResult with standardized address components
    */
   private async callGeocodingAPI(address: string): Promise<GeocodingResult> {
     try {
-      const url = `${this.baseUrl}?address=${encodeURIComponent(
-        address,
-      )}&key=${this.apiKey}&region=us`;
+      const params = new URLSearchParams({
+        address: address,
+        format: 'json',
+        benchmark: 'Public_AR_Current',
+      });
+
+      if (this.apiKey) {
+        params.append('key', this.apiKey);
+      }
+
+      const url = `${this.baseUrl}?${params.toString()}`;
 
       const response = await firstValueFrom(
-        this.httpService.get<GeocodingApiResponse>(url),
+        this.httpService.get<CensusGeocodingApiResponse>(url),
       );
 
       const data = response.data;
 
-      if (data.status === 'ZERO_RESULTS') {
+      if (!data.result || !data.result.addressMatches || data.result.addressMatches.length === 0) {
         throw new HttpException(
           'Invalid address: address could not be found',
           HttpStatus.BAD_REQUEST,
         );
       }
 
-      if (data.status === 'REQUEST_DENIED') {
-        this.logger.error(`Geocoding API error: ${data.status}`);
+      const match = data.result.addressMatches[0];
+      return this.parseCensusGeocodingResult(match, address);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(`Census Geocoding API error: ${errorObj.message}`, errorObj.stack);
+      
+      if (errorObj.message.includes('timeout') || errorObj.message.includes('ECONNREFUSED')) {
         throw new HttpException(
           'Geocoding service unavailable',
           HttpStatus.SERVICE_UNAVAILABLE,
         );
       }
 
-      if (data.status !== 'OK' && data.status !== 'PARTIAL_MATCH') {
-        this.logger.warn(`Geocoding API returned status: ${data.status}`);
-        throw new HttpException(
-          'Unable to validate address',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      if (data.results.length === 0) {
-        throw new HttpException(
-          'Invalid address: no results found for the provided address',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const result = data.results[0];
-      return this.parseGeocodingResult(result);
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw error;
+      throw new HttpException(
+        'Unable to validate address',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
   /**
-   * Parses Google Geocoding API response into structured format
+   * Parses US Census Geocoding API response into structured format
    */
-  private parseGeocodingResult(
-    result: GeocodingApiResponse['results'][0],
+  private parseCensusGeocodingResult(
+    match: CensusGeocodingApiResponse['result']['addressMatches'][0],
+    originalAddress: string,
   ): GeocodingResult {
-    const addressComponents: GeocodingResult['addressComponents'] = {};
+    const addressFields = match.addressFields;
+    const addressComponents = match.addressComponents;
 
-    for (const component of result.address_components) {
-      const types = component.types;
+    const streetNumber = addressComponents.fromAddress || addressComponents.toAddress;
+    const streetName = addressComponents.streetName || '';
+    const preDirection = addressComponents.preDirection || '';
+    const postDirection = addressComponents.postDirection || '';
+    const streetSuffix = addressComponents.streetSuffix || '';
 
-      if (types.includes('street_number')) {
-        addressComponents.streetNumber = component.long_name;
-      } else if (
-        types.includes('route') ||
-        types.includes('street_address')
-      ) {
-        addressComponents.street = component.long_name;
-      } else if (
-        types.includes('locality') ||
-        types.includes('sublocality')
-      ) {
-        addressComponents.city = component.long_name;
-      } else if (types.includes('administrative_area_level_1')) {
-        addressComponents.state = component.short_name;
-      } else if (types.includes('postal_code')) {
-        addressComponents.zipCode = component.long_name;
-      }
-    }
+    const fullStreet = [preDirection, streetName, streetSuffix, postDirection]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    const formattedAddress = [
+      streetNumber ? `${streetNumber} ${fullStreet}` : fullStreet,
+      addressFields.City,
+      addressFields.State,
+      addressFields.Zip,
+    ]
+      .filter(Boolean)
+      .join(', ');
 
     return {
-      formattedAddress: result.formatted_address,
-      addressComponents,
-      location: {
-        lat: result.geometry.location.lat,
-        lng: result.geometry.location.lng,
+      formattedAddress: formattedAddress || match.matchedAddress,
+      addressComponents: {
+        streetNumber: streetNumber || undefined,
+        street: fullStreet || addressFields.Street || undefined,
+        city: addressFields.City || undefined,
+        state: addressFields.State || undefined,
+        zipCode: addressFields.Zip || undefined,
       },
-      placeId: result.place_id,
-      types: result.types,
+      location: {
+        lat: match.coordinates.y,
+        lng: match.coordinates.x,
+      },
+      placeId: match.tigerLine?.tigerLineId || `census-${match.coordinates.x}-${match.coordinates.y}`,
+      types: ['street_address'],
     };
   }
 
   /**
    * Checks if the geocoded result is a US address
+   * Census API only returns US addresses, so this always returns true if we have state and zip
    */
   isUSAddress(result: GeocodingResult): boolean {
     if (result.addressComponents.state && result.addressComponents.zipCode) {
@@ -238,4 +244,3 @@ export class GeocodingService {
     return false;
   }
 }
-

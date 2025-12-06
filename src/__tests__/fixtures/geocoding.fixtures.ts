@@ -34,7 +34,7 @@ export const mockNonUSGeocodingResult: GeocodingResult = {
   types: ['street_address'],
 };
 
-export const mockGoogleApiSuccessResponse: GeocodingApiResponse = {
+export const mockLegacyApiSuccessResponse: GeocodingApiResponse = {
   status: 'OK',
   results: [
     {
@@ -79,12 +79,12 @@ export const mockGoogleApiSuccessResponse: GeocodingApiResponse = {
   ],
 };
 
-export const mockGoogleApiZeroResultsResponse: GeocodingApiResponse = {
+export const mockLegacyApiZeroResultsResponse: GeocodingApiResponse = {
   status: 'ZERO_RESULTS',
   results: [],
 };
 
-export const mockGoogleApiRequestDeniedResponse: GeocodingApiResponse = {
+export const mockLegacyApiRequestDeniedResponse: GeocodingApiResponse = {
   status: 'REQUEST_DENIED',
   results: [],
 };

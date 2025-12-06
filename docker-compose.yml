@@ -29,8 +29,8 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=${PORT:-3000}
-      - GOOGLE_GEOCODING_API_KEY=${GOOGLE_GEOCODING_API_KEY}
-      - GOOGLE_GEOCODING_API_URL=${GOOGLE_GEOCODING_API_URL:-}
+      - GEOCODING_API_URL=${GEOCODING_API_URL:-https://geocoding.geo.census.gov/geocoder/locations/address}
+      - GEOCODING_API_KEY=${GEOCODING_API_KEY:-}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}

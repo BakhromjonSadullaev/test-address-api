@@ -69,7 +69,7 @@ describe('HealthController', () => {
     expect(result.service).toBe('address-validation-api');
     expect(new Date(result.timestamp)).toBeInstanceOf(Date);
     expect(result.checks.service.status).toBe('ok');
-    expect(result.checks.googleApi.status).toBe('ok');
+    expect(result.checks.geocodingApi.status).toBe('ok');
     expect(result.checks.cache.status).toBe('ok');
   });
 });

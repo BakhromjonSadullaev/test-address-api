@@ -15,15 +15,15 @@ export const envValidationSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
 
-  GOOGLE_GEOCODING_API_KEY: z
+  GEOCODING_API_URL: z
     .string()
-    .min(1, 'GOOGLE_GEOCODING_API_KEY is required')
-    .describe('Google Geocoding API key'),
-  GOOGLE_GEOCODING_API_URL: z
+    .url('GEOCODING_API_URL must be a valid URL')
+    .default('https://geocoding.geo.census.gov/geocoder/locations/address')
+    .describe('Geocoding API base URL (defaults to US Census Geocoding API)'),
+  GEOCODING_API_KEY: z
     .string()
-    .url('GOOGLE_GEOCODING_API_URL must be a valid URL')
-    .default('https://maps.googleapis.com/maps/api/geocode/json')
-    .describe('Google Geocoding API base URL'),
+    .optional()
+    .describe('Geocoding API key (optional, not required for Census API)'),
 
   RATE_LIMIT_TTL: z
     .string()

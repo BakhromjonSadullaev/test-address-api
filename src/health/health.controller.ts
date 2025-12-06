@@ -18,7 +18,7 @@ export class HealthController {
   @Get()
   @ApiOperation({
     summary: 'Health check',
-    description: 'Returns the health status of the API service and Google Geocoding API',
+    description: 'Returns the health status of the API service and US Census Geocoding API',
   })
   @ApiResponse({
     status: 200,
@@ -33,7 +33,7 @@ export class HealthController {
           type: 'object',
           properties: {
             service: { type: 'object', properties: { status: { type: 'string' } } },
-            googleApi: { type: 'object', properties: { status: { type: 'string' }, responseTime: { type: 'number' } } },
+            geocodingApi: { type: 'object', properties: { status: { type: 'string' }, responseTime: { type: 'number' } } },
             cache: { type: 'object', properties: { status: { type: 'string' } } },
           },
         },
@@ -48,11 +48,11 @@ export class HealthController {
     const timestamp = new Date().toISOString();
     const checks: {
       service: { status: string };
-      googleApi: { status: string; responseTime?: number; error?: string };
+      geocodingApi: { status: string; responseTime?: number; error?: string };
       cache: { status: string; type?: string };
     } = {
       service: { status: 'ok' },
-      googleApi: { status: 'unknown' },
+      geocodingApi: { status: 'unknown' },
       cache: { status: 'unknown' },
     };
 
@@ -78,11 +78,11 @@ export class HealthController {
       checks.cache.status = 'error';
     }
 
-    // Check Google API with a simple test address
-    const googleApiStartTime = Date.now();
+    // Check Geocoding API with a simple test address
+    const geocodingApiStartTime = Date.now();
     try {
-      // Use a well-known address for health check (Google's headquarters)
-      const testAddress = '1600 Amphitheatre Parkway, Mountain View, CA';
+      // Use a well-known US address for health check
+      const testAddress = '1600 Pennsylvania Avenue NW, Washington, DC 20500';
       
       // Add timeout to prevent hanging (5 seconds)
       const timeoutPromise = new Promise((_, reject) => {
@@ -94,21 +94,21 @@ export class HealthController {
         timeoutPromise,
       ]);
       
-      const responseTime = Date.now() - googleApiStartTime;
-      checks.googleApi.status = 'ok';
-      checks.googleApi.responseTime = responseTime;
+      const responseTime = Date.now() - geocodingApiStartTime;
+      checks.geocodingApi.status = 'ok';
+      checks.geocodingApi.responseTime = responseTime;
     } catch (error: unknown) {
-      const responseTime = Date.now() - googleApiStartTime;
-      checks.googleApi.status = 'error';
-      checks.googleApi.responseTime = responseTime;
+      const responseTime = Date.now() - geocodingApiStartTime;
+      checks.geocodingApi.status = 'error';
+      checks.geocodingApi.responseTime = responseTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      checks.googleApi.error = errorMessage;
+      checks.geocodingApi.error = errorMessage;
     }
 
     // Determine overall status
     const isHealthy =
       checks.service.status === 'ok' &&
-      checks.googleApi.status === 'ok' &&
+      checks.geocodingApi.status === 'ok' &&
       checks.cache.status !== 'error';
 
     const response = {

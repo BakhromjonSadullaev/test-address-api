@@ -1,6 +1,6 @@
 # Address Validation API
 
-A robust backend API built with NestJS and TypeScript that validates and standardizes US property addresses. The service integrates with Google Geocoding API to provide accurate address validation, correction, and standardization.
+A robust backend API built with NestJS and TypeScript that validates and standardizes US property addresses. The service integrates with US Census Geocoding API (free, public service) to provide accurate address validation, correction, and standardization.
 
 ## Features
 
@@ -37,7 +37,7 @@ src/
 │       ├── validate-address.dto.ts
 │       └── address-response.dto.ts
 └── geocoding/                 # Geocoding service module
-    ├── geocoding.service.ts   # Google Geocoding API integration
+    ├── geocoding.service.ts   # US Census Geocoding API integration
     └── types/                 # TypeScript types
         └── geocoding-result.interface.ts
 ```
@@ -146,7 +146,7 @@ CORS_ALLOWED_HEADERS=Content-Type,Authorization
 
 ### Circuit Breaker
 
-The application implements a circuit breaker pattern using `opossum` to protect against cascading failures when the Google Geocoding API is down or experiencing issues.
+The application implements a circuit breaker pattern using `opossum` to protect against cascading failures when the US Census Geocoding API is down or experiencing issues.
 
 **How it works:**
 1. **Closed State**: Normal operation - all requests go through
@@ -256,25 +256,21 @@ The validation schema is defined in `src/config/env.validation.ts`:
 
 ```typescript
 export const envValidationSchema = z.object({
-  GOOGLE_GEOCODING_API_KEY: z.string().min(1, 'Required'),
+  GEOCODING_API_URL: z.string().url().default('https://geocoding.geo.census.gov/geocoder/locations/address'),
+  GEOCODING_API_KEY: z.string().optional(),
   PORT: z.string().default('3000').transform(parseInt),
   // ... other variables
 });
 ```
 
-If any required variable is missing or invalid, the application will fail to start with a clear error message:
-
-```
-❌ Invalid environment variables:
-  - GOOGLE_GEOCODING_API_KEY: Required
-```
+If any required variable is missing or invalid, the application will fail to start with a clear error message. Note: US Census Geocoding API does not require an API key.
 
 ### Error Handling
 
 The API handles various error scenarios:
 
 - **Invalid Input**: Validated using class-validator DTOs
-- **API Errors**: Google Geocoding API errors are caught and converted to appropriate HTTP status codes
+- **API Errors**: US Census Geocoding API errors are caught and converted to appropriate HTTP status codes
 - **Network Errors**: Gracefully handled with fallback to unverifiable status
 - **Missing Configuration**: Environment validation ensures required config is present at startup
 
@@ -286,20 +282,20 @@ The API handles various error scenarios:
 - **Validation**: class-validator, class-transformer
 - **Caching**: @nestjs/cache-manager (in-memory, Redis-ready)
 - **Rate Limiting**: @nestjs/throttler
-- **External API**: Google Geocoding API
+- **External API**: US Census Geocoding API (free, public service)
 
 ## Prerequisites
 
 ### Option 1: Docker (Recommended - Easiest Setup)
 - Docker (v20.10 or higher) - [Download here](https://www.docker.com/get-started)
 - Docker Compose (v2.0 or higher - included with Docker Desktop)
-- Google Geocoding API key ([Get one here](https://developers.google.com/maps/documentation/geocoding/get-api-key))
+- No API key required (uses free US Census Geocoding API)
 
 ### Option 2: Local Development
 - Node.js (v18 or higher)
 - npm or yarn
 - Redis (optional, for distributed caching)
-- Google Geocoding API key ([Get one here](https://developers.google.com/maps/documentation/geocoding/get-api-key))
+- No API key required (uses free US Census Geocoding API)
 
 ## Installation
 
@@ -316,9 +312,12 @@ cd test-project
 cp .env.example .env
 ```
 
-3. Edit `.env` and add your Google Geocoding API key:
+3. Edit `.env` if needed (optional - defaults to US Census Geocoding API):
 ```env
-GOOGLE_GEOCODING_API_KEY=your_google_api_key_here
+# Optional: Customize geocoding API URL if using a different service
+GEOCODING_API_URL=https://geocoding.geo.census.gov/geocoder/locations/address
+# Optional: API key if using a different geocoding service
+GEOCODING_API_KEY=
 ```
 
 4. Start everything with Docker Compose:
@@ -371,7 +370,8 @@ cp .env.example .env
 ```env
 PORT=3000
 NODE_ENV=development
-GOOGLE_GEOCODING_API_KEY=your_google_api_key_here
+# No API key required for US Census Geocoding API
+GEOCODING_API_URL=https://geocoding.geo.census.gov/geocoder/locations/address
 RATE_LIMIT_TTL=60
 RATE_LIMIT_MAX=100
 REDIS_TTL=3600
@@ -581,7 +581,8 @@ The following aspects were carefully designed and implemented:
 |----------|-------------|---------|
 | `PORT` | Server port | `3000` |
 | `NODE_ENV` | Environment (development/production) | `development` |
-| `GOOGLE_GEOCODING_API_KEY` | Google Geocoding API key | **Required** |
+| `GEOCODING_API_URL` | Geocoding API base URL | `https://geocoding.geo.census.gov/geocoder/locations/address` |
+| `GEOCODING_API_KEY` | Geocoding API key (optional, not required for Census API) | `` (optional) |
 | `RATE_LIMIT_TTL` | Rate limit time window in seconds | `60` |
 | `RATE_LIMIT_MAX` | Maximum requests per time window | `100` |
 | `REDIS_TTL` | Cache TTL in seconds | `3600` |
@@ -616,7 +617,7 @@ test-project/
 │   │       ├── validate-address.dto.ts
 │   │       └── address-response.dto.ts
 │   └── geocoding/                       # Geocoding service module
-│       ├── geocoding.service.ts         # Google API integration
+│       ├── geocoding.service.ts         # US Census Geocoding API integration
 │       └── types/
 │           └── geocoding-result.interface.ts
 ├── Dockerfile                           # Production Docker image

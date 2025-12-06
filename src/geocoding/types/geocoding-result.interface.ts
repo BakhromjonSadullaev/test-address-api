@@ -15,6 +15,41 @@ export interface GeocodingResult {
   types: string[];
 }
 
+// US Census Geocoding API Response
+export interface CensusGeocodingApiResponse {
+  result: {
+    addressMatches: Array<{
+      matchedAddress: string;
+      coordinates: {
+        x: number; // longitude
+        y: number; // latitude
+      };
+      addressComponents: {
+        streetName: string;
+        fromAddress: string;
+        toAddress: string;
+        preDirection: string;
+        postDirection: string;
+        streetSuffix: string;
+        city: string;
+        state: string;
+        zip: string;
+      };
+      tigerLine: {
+        tigerLineId: string;
+        side: string;
+      };
+      addressFields: {
+        Street: string;
+        City: string;
+        State: string;
+        Zip: string;
+      };
+    }>;
+  };
+}
+
+// Legacy API response interface (kept for backward compatibility if needed)
 export interface GeocodingApiResponse {
   results: Array<{
     address_components: Array<{
@@ -34,4 +69,3 @@ export interface GeocodingApiResponse {
   }>;
   status: string;
 }
-

@@ -55,7 +55,7 @@ async function bootstrap() {
     .setTitle('Address Validation API')
     .setDescription(
       'A robust API for validating and standardizing US property addresses. ' +
-      'The service integrates with Google Geocoding API to provide accurate address validation, ' +
+      'The service integrates with US Census Geocoding API to provide accurate address validation, ' +
       'correction, and standardization. Supports edge cases like partial addresses and typos.',
     )
     .setVersion('1.0.0')

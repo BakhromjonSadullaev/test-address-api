@@ -6,7 +6,7 @@ This document provides comprehensive information about the Address Validation AP
 
 **Project Name:** Address Validation API  
 **Type:** REST API Backend Service  
-**Purpose:** Validates and standardizes US property addresses using Google Geocoding API  
+**Purpose:** Validates and standardizes US property addresses using US Census Geocoding API (free, public service)  
 **Framework:** NestJS 10.x with TypeScript 5.x  
 **Language:** TypeScript
 
@@ -62,7 +62,7 @@ test-adress-api/
 │   │       ├── validate-address.dto.ts
 │   │       └── address-response.dto.ts
 │   ├── geocoding/                      # Geocoding service module
-│   │   ├── geocoding.service.ts        # Google API integration
+│   │   ├── geocoding.service.ts        # US Census Geocoding API integration
 │   │   └── types/
 │   │       └── geocoding-result.interface.ts
 │   ├── health/                          # Health check module
@@ -101,7 +101,7 @@ The application follows NestJS modular architecture:
    - `AddressService` - Validation logic, caching, status determination
 
 3. **Geocoding Module** - External API integration:
-   - `GeocodingService` - Google Geocoding API wrapper
+   - `GeocodingService` - US Census Geocoding API wrapper
    - Circuit breaker protection
    - Error handling
 
@@ -251,9 +251,13 @@ The application follows NestJS modular architecture:
 All environment variables are validated at startup using Zod. Missing or invalid variables will prevent the application from starting.
 
 #### Required Variables
-- `GOOGLE_GEOCODING_API_KEY` - Google Geocoding API key (required)
+- None (US Census Geocoding API is used by default, no API key required)
 
 #### Optional Variables (with defaults)
+
+**Geocoding API:**
+- `GEOCODING_API_URL` - Geocoding API base URL (default: `https://geocoding.geo.census.gov/geocoder/locations/address`)
+- `GEOCODING_API_KEY` - Geocoding API key (optional, not required for Census API)
 
 **Server Configuration:**
 - `PORT` - Server port (default: `3000`)
@@ -314,7 +318,7 @@ All environment variables are validated at startup using Zod. Missing or invalid
 
 3. **Geocoding** (`GeocodingService`)
    - Circuit breaker protection
-   - Call Google Geocoding API
+   - Call US Census Geocoding API
    - Parse response into structured format
 
 4. **US Address Check** (`GeocodingService`)
@@ -454,7 +458,7 @@ docker-compose up -d
 - Similarity calculation (Levenshtein distance)
 
 ### `src/geocoding/geocoding.service.ts`
-- Google Geocoding API integration
+- US Census Geocoding API integration
 - Circuit breaker implementation
 - Error handling
 - Response parsing
@@ -472,7 +476,8 @@ docker-compose up -d
 constructor(
   private readonly configService: ConfigService<EnvConfig>
 ) {
-  const apiKey = this.configService.get('GOOGLE_GEOCODING_API_KEY')!;
+  const apiUrl = this.configService.get('GEOCODING_API_URL')!;
+  const apiKey = this.configService.get('GEOCODING_API_KEY'); // Optional
   // Type-safe access with EnvConfig type
 }
 ```
@@ -593,7 +598,7 @@ Potential improvements (not yet implemented):
 ## 📚 Additional Resources
 
 - **NestJS Documentation**: https://docs.nestjs.com
-- **Google Geocoding API**: https://developers.google.com/maps/documentation/geocoding
+- **US Census Geocoding API**: https://geocoding.geo.census.gov/geocoder/geocoding_services.html
 - **Zod Documentation**: https://zod.dev
 - **Pino Documentation**: https://getpino.io
 

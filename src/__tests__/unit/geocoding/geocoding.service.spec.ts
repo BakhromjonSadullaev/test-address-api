@@ -18,7 +18,8 @@ describe('GeocodingService', () => {
   const mockConfigService = {
     get: jest.fn((key: string) => {
       const config: Record<string, any> = {
-        GOOGLE_GEOCODING_API_KEY: 'test-api-key',
+        GEOCODING_API_URL: 'https://geocoding.geo.census.gov/geocoder/locations/address',
+        GEOCODING_API_KEY: undefined,
         CIRCUIT_BREAKER_ERROR_THRESHOLD_PERCENTAGE: 50,
         CIRCUIT_BREAKER_TIMEOUT: 10000,
         CIRCUIT_BREAKER_RESET_TIMEOUT: 30000,
